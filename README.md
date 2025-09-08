@@ -2,11 +2,65 @@
 
 **Cliente oficial para la API pública de Lexia**
 
-[![PyPI version](https://badge.fury.io/py/kurai-sdk.svg)](https://badge.fury.io/py/kurai-sdk)
-[![Python versions](https://img.shields.io/pypi/pyversions/kurai-sdk.svg)](https://pypi.org/project/kurai-sdk/)
+[![GitHub release](https://img.shields.io/github/release/lexia-dev/kurai-sdk.svg)](https://github.com/lexia-dev/kurai-sdk/releases)
+[![Python versions](https://img.shields.io/badge/python-3.7%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/lexia-dev/kurai-sdk.svg?style=social)](https://github.com/lexia-dev/kurai-sdk/stargazers)
 
 Kurai es el SDK oficial en Python para interactuar con todos los endpoints públicos de la API de Lexia. Proporciona una interfaz simple y pythónica para integrar las funcionalidades de automatización y procesamiento de documentos de Lexia en tus aplicaciones.
+
+## 📦 Instalación
+
+### 🎯 Instalación desde GitHub (Recomendada)
+
+```bash
+# Instalar la última versión
+pip install git+https://github.com/lexia-dev/kurai-sdk.git
+
+# O instalar una versión específica
+pip install git+https://github.com/lexia-dev/kurai-sdk.git@v1.0.0
+```
+
+### 🔄 Actualizar a la última versión
+
+```bash
+pip install --upgrade git+https://github.com/lexia-dev/kurai-sdk.git
+```
+
+### ✅ Verificar instalación
+
+```bash
+python -c "import kurai; print(f'✅ Kurai SDK v{kurai.__version__} instalado correctamente')"
+```
+
+### 📋 Requisitos
+
+- **Python 3.7+**
+- **requests** >= 2.25.0
+- **pydantic** >= 1.8.0
+- **click** >= 8.0.0
+
+> 💡 **Nota**: Las dependencias se instalan automáticamente
+
+## ⚡ Inicio Rápido (30 segundos)
+
+```python
+import kurai
+
+# 1. Configurar cliente
+client = kurai.Client(
+    tenant_url="https://api.cloud.lexia.la",
+    api_key="lx-xxxxxxxxxxxxxxxxxxxxx"
+)
+
+# 2. Verificar conexión
+health = client.health_check()
+print(f"✅ Estado: {health['status']}")
+
+# 3. ¡Ya estás listo para usar todas las funcionalidades!
+areas = client.list_areas()
+print(f"📁 Áreas disponibles: {len(areas['areas'])}")
+```
 
 ## ✨ Características
 
@@ -19,47 +73,6 @@ Kurai es el SDK oficial en Python para interactuar con todos los endpoints públ
 - 💻 **CLI incluido**
 - 📚 **Documentación completa**
 - 🐍 **Compatible con Python 3.7+**
-
-## 📦 Instalación
-
-```bash
-pip install kurai-sdk
-```
-
-## ⚡ Inicio Rápido
-
-```python
-import kurai
-
-# Configurar cliente
-client = kurai.Client(
-    tenant_url="https://api.cloud.lexia.la",
-    api_key="lx-xxxxxxxxxxxxxxxxxxxxx"
-)
-
-# Verificar conexión
-health = client.health_check()
-print(f"Estado: {health['status']}")
-
-# Listar áreas disponibles
-areas = client.list_areas()
-for area in areas['areas']:
-    print(f"Área: {area['nombre']} (ID: {area['id']})")
-
-# Subir documento
-result = client.upload_document(
-    file_path="/path/to/document.pdf",
-    area_id=1,
-    description="Mi documento importante"
-)
-
-# Trabajar con colas
-result = client.add_queue_item(
-    queue_name="procesamiento",
-    data={"task": "extraer_datos", "priority": "high"},
-    priority=2
-)
-```
 
 ## 🔧 Configuración
 
@@ -296,9 +309,122 @@ if __name__ == "__main__":
     flujo_completo()
 ```
 
+## 🔄 Actualizaciones y Versionado
+
+### Obtener la última versión
+```bash
+pip install --upgrade git+https://github.com/lexia-dev/kurai-sdk.git
+```
+
+### Instalar versión específica
+```bash
+pip install git+https://github.com/lexia-dev/kurai-sdk.git@v1.0.0
+```
+
+### Ver historial de cambios
+Consulta [CHANGELOG.md](CHANGELOG.md) o [GitHub Releases](https://github.com/lexia-dev/kurai-sdk/releases) para ver todas las actualizaciones.
+
+## 🚀 Empezar Ahora
+
+### Paso 1: Instalar
+```bash
+pip install git+https://github.com/lexia-dev/kurai-sdk.git
+```
+
+### Paso 2: Obtener API Key
+1. Ve a tu panel de Lexia
+2. Genera una nueva API Key
+3. Copia la key (empieza con `lx-`)
+
+### Paso 3: Probar la conexión
+```python
+import kurai
+
+client = kurai.Client(
+    tenant_url="https://api.cloud.lexia.la",
+    api_key="lx-tu-api-key-aqui"
+)
+
+# Verificar que funciona
+health = client.health_check()
+print(f"✅ Conexión exitosa: {health['status']}")
+```
+
+### Paso 4: ¡Empezar a desarrollar!
+```python
+# Listar áreas disponibles
+areas = client.list_areas()
+
+# Subir un documento
+result = client.upload_document("/path/to/file.pdf", area_id=1)
+
+# Trabajar con colas
+item = client.add_queue_item("mi_cola", {"task": "procesar"})
+```
+
+## 🎓 Tutoriales y Ejemplos
+
+### 🏃‍♂️ Ejemplo Express (2 minutos)
+```python
+import kurai
+
+# Configurar y probar
+client = kurai.Client("https://api.cloud.lexia.la", "lx-xxxxx")
+print("✅ SDK conectado:", client.health_check()['status'])
+
+# Subir documento y agregarlo a cola
+doc = client.upload_document("factura.pdf", area_id=1)
+cola = client.add_queue_item("procesamiento", {"doc_id": doc['document']['id']})
+print(f"📄 Documento {doc['document']['id']} en cola {cola['item']['id']}")
+```
+
+### 🏭 Ejemplo Productivo
+```python
+import kurai
+import os
+from pathlib import Path
+
+def procesar_facturas():
+    client = kurai.Client(
+        tenant_url=os.getenv("LEXIA_URL"),
+        api_key=os.getenv("LEXIA_API_KEY")
+    )
+    
+    # Procesar todas las facturas de una carpeta
+    facturas_dir = Path("./facturas")
+    
+    for archivo in facturas_dir.glob("*.pdf"):
+        try:
+            # Subir y procesar
+            resultado = client.upload_and_process_document(
+                str(archivo),
+                area_id=1,
+                description=f"Factura {archivo.name}"
+            )
+            
+            # Agregar a cola de validación
+            client.add_queue_item(
+                "validacion_facturas",
+                {
+                    "document_id": resultado['document']['id'],
+                    "filename": archivo.name,
+                    "timestamp": resultado['document']['created_at']
+                },
+                priority=2
+            )
+            
+            print(f"✅ {archivo.name} procesada correctamente")
+            
+        except Exception as e:
+            print(f"❌ Error con {archivo.name}: {e}")
+
+if __name__ == "__main__":
+    procesar_facturas()
+```
+
 ## 🆘 Soporte
 
-- **Issues**: [GitHub Issues](https://github.com/lexia/kurai-sdk/issues)
+- **Issues**: [GitHub Issues](https://github.com/Ascential-cer/Kurai_SDK/issues)
 - **Email**: [dev@lexia.la](mailto:dev@lexia.la)
 - **Documentación**: [docs.lexia.la](https://docs.lexia.la)
 - **Sitio web**: [lexia.la](https://lexia.la)
