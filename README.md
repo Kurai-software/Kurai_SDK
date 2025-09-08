@@ -313,22 +313,22 @@ if __name__ == "__main__":
 
 ### Obtener la última versión
 ```bash
-pip install --upgrade git+https://github.com/lexia-dev/kurai-sdk.git
+pip install --upgrade git+https://github.com/Kurai-software/Kurai_SDK.git
 ```
 
 ### Instalar versión específica
 ```bash
-pip install git+https://github.com/lexia-dev/kurai-sdk.git@v1.0.0
+pip install git+https://github.com/Kurai-software/Kurai_SDK.git@v1.0.1
 ```
 
 ### Ver historial de cambios
-Consulta [CHANGELOG.md](CHANGELOG.md) o [GitHub Releases](https://github.com/lexia-dev/kurai-sdk/releases) para ver todas las actualizaciones.
+Consulta [CHANGELOG.md](CHANGELOG.md) o [GitHub Releases](https://github.com/Kurai-software/Kurai_SDK/releases) para ver todas las actualizaciones.
 
 ## 🚀 Empezar Ahora
 
 ### Paso 1: Instalar
 ```bash
-pip install git+https://github.com/lexia-dev/kurai-sdk.git
+pip install git+https://github.com/Kurai-software/Kurai_SDK.git
 ```
 
 ### Paso 2: Obtener API Key
