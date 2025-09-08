@@ -424,7 +424,7 @@ if __name__ == "__main__":
 
 ## 🆘 Soporte
 
-- **Issues**: [GitHub Issues](https://github.com/Ascential-cer/Kurai_SDK/issues)
+- **Issues**: [GitHub Issues](https://github.com/Kurai-software/Kurai_SDK/issues)
 - **Email**: [dev@lexia.la](mailto:dev@lexia.la)
 - **Documentación**: [docs.lexia.la](https://docs.lexia.la)
 - **Sitio web**: [lexia.la](https://lexia.la)
