@@ -163,22 +163,73 @@ analytics = client.get_queue_analytics(period='24h')
 # Obtener correo por ID
 email = client.get_email_by_id("email_123")
 
-# Responder correo simple
+# NUEVO: Enviar correo simple
+result = client.send_simple_email(
+    to="cliente@empresa.com",
+    subject="Documento procesado exitosamente",
+    body="<h2>¡Listo!</h2><p>Su documento ha sido procesado correctamente.</p>"
+)
+
+# NUEVO: Enviar correo completo con múltiples destinatarios
+result = client.send_email(
+    to=["user1@test.com", "user2@test.com"],
+    cc=["supervisor@empresa.com"],
+    bcc=["archivo@empresa.com"],
+    subject="Reporte mensual de procesamiento",
+    body="""
+    <h2>Reporte Mensual</h2>
+    <p>Estimado equipo,</p>
+    <p>Adjunto el reporte de procesamiento de documentos del mes.</p>
+    <ul>
+        <li>✅ 1,247 documentos procesados</li>
+        <li>✅ 98.5% de precisión</li>
+        <li>✅ Tiempo promedio: 2.1 segundos</li>
+    </ul>
+    """,
+    reply_to="noreply@empresa.com"
+)
+
+# NUEVO: Enviar correo con adjuntos
+with open("reporte.pdf", "rb") as f:
+    pdf_data = f.read()
+
+with open("datos.csv", "rb") as f:
+    csv_data = f.read()
+
+result = client.send_email(
+    to="director@empresa.com",
+    subject="Documentos del proyecto",
+    body="<p>Adjunto los documentos solicitados.</p>",
+    archivos=[
+        ("reporte_completo.pdf", pdf_data),
+        ("datos_exportados.csv", csv_data)
+    ]
+)
+
+# NUEVO: Enviar notificación usando plantillas
+result = client.send_notification_email(
+    to="usuario@ejemplo.com",
+    template_type="document_processed",
+    template_data={
+        "document_name": "factura_enero.pdf",
+        "processing_time": "1.8 segundos",
+        "confidence_score": "99.2%"
+    }
+)
+
+# Responder correo existente
 result = client.reply_to_email(
     email_id="email_123",
-    mensaje="Gracias por su consulta",
+    mensaje="Gracias por su consulta, hemos procesado su solicitud.",
     tipo_respuesta="texto"
 )
 
 # Responder con adjuntos
-with open("reporte.pdf", "rb") as f:
-    archivo_data = f.read()
-
 result = client.reply_to_email(
     email_id="email_123",
-    mensaje="<p>Adjunto el reporte</p>",
+    mensaje="<p>Adjunto el reporte solicitado</p>",
     tipo_respuesta="html",
-    archivos=[("reporte.pdf", archivo_data)]
+    archivos=[("reporte.pdf", pdf_data)]
 )
 ```
 

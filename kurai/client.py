@@ -517,3 +517,144 @@ class Client:
                 data['asunto_personalizado'] = asunto_personalizado
             
             return self._post('/public/api/correo/responder', data=data)
+
+
+    def send_email(self, to, subject, body, body_type="html", cc=None, bcc=None, 
+        reply_to=None, body_text=None, archivos=None) -> dict:
+        """
+        Enviar un correo electrónico nuevo
+        
+        Args:
+            to (str|list): Destinatario(s) del correo
+            subject (str): Asunto del correo
+            body (str): Cuerpo del mensaje
+            body_type (str): "html" o "texto" (por defecto "html")
+            cc (str|list): Destinatarios CC (opcional)
+            bcc (str|list): Destinatarios BCC (opcional)
+            reply_to (str): Dirección de respuesta (opcional)
+            body_text (str): Versión texto plano del mensaje (opcional)
+            archivos (List[tuple]): Lista de tuplas (nombre_archivo, contenido_bytes) para adjuntos
+            
+        Returns:
+            dict: Resultado del envío
+            
+        Ejemplo:
+            # Envío simple
+            result = client.send_email(
+                to="destinatario@ejemplo.com",
+                subject="Hola desde Kurai",
+                body="<h1>¡Funciona!</h1><p>SDK funcionando correctamente.</p>"
+            )
+            
+            # Con múltiples destinatarios y adjuntos
+            with open("archivo.pdf", "rb") as f:
+                archivo_data = f.read()
+                
+            result = client.send_email(
+                to=["user1@test.com", "user2@test.com"],
+                cc=["supervisor@test.com"],
+                subject="Reporte mensual",
+                body="<p>Adjunto el reporte del mes.</p>",
+                archivos=[("reporte.pdf", archivo_data)]
+            )
+        """
+        # Normalizar destinatarios
+        if isinstance(to, str):
+            to = [to]
+        
+        email_data = {
+            'to': to,
+            'subject': subject,
+            'body': body,
+            'body_type': body_type
+        }
+        
+        # Agregar campos opcionales
+        if cc:
+            if isinstance(cc, str):
+                cc = [cc]
+            email_data['cc'] = cc
+        
+        if bcc:
+            if isinstance(bcc, str):
+                bcc = [bcc]
+            email_data['bcc'] = bcc
+        
+        if reply_to:
+            email_data['reply_to'] = reply_to
+        
+        if body_text:
+            email_data['body_text'] = body_text
+        
+        # Si hay archivos, usar multipart/form-data
+        if archivos:
+            # Convertir listas a strings para form-data
+            form_data = email_data.copy()
+            if isinstance(form_data.get('to'), list):
+                form_data['to'] = ', '.join(form_data['to'])
+            if isinstance(form_data.get('cc'), list):
+                form_data['cc'] = ', '.join(form_data['cc'])
+            if isinstance(form_data.get('bcc'), list):
+                form_data['bcc'] = ', '.join(form_data['bcc'])
+            
+            files = {}
+            for i, (filename, file_content) in enumerate(archivos):
+                files['archivos'] = (filename, file_content, 'application/octet-stream')
+            
+            return self._post('/public/api/correo/enviar', data=form_data, files=files)
+        else:
+            # Usar JSON para envío simple
+            return self._post('/public/api/correo/enviar', data=email_data)
+
+    def send_simple_email(self, to, subject, body, body_type="html") -> dict:
+            """
+            Método de conveniencia para enviar un correo simple sin adjuntos
+            
+            Args:
+                to (str): Destinatario del correo
+                subject (str): Asunto del correo
+                body (str): Cuerpo del mensaje
+                body_type (str): "html" o "texto" (por defecto "html")
+                
+            Returns:
+                dict: Resultado del envío
+                
+            Ejemplo:
+                result = client.send_simple_email(
+                    to="usuario@ejemplo.com",
+                    subject="Notificación importante",
+                    body="<p>Tu documento ha sido procesado exitosamente.</p>"
+                )
+            """
+            return self.send_email(to=to, subject=subject, body=body, body_type=body_type)
+
+    def send_notification_email(self, to, template_type, template_data=None) -> dict:
+            """
+            Enviar email usando plantillas predefinidas del sistema
+            
+            Args:
+                to (str): Destinatario del correo
+                template_type (str): Tipo de plantilla ("document_processed", "queue_completed", etc.)
+                template_data (dict): Datos para rellenar la plantilla
+                
+            Returns:
+                dict: Resultado del envío
+                
+            Ejemplo:
+                result = client.send_notification_email(
+                    to="usuario@ejemplo.com",
+                    template_type="document_processed",
+                    template_data={
+                        "document_name": "factura_enero.pdf",
+                        "processing_time": "2.3 segundos",
+                        "extracted_data": {"total": "$1,500.00"}
+                    }
+                )
+            """
+            email_data = {
+                'to': [to] if isinstance(to, str) else to,
+                'template_type': template_type,
+                'template_data': template_data or {}
+            }
+            
+            return self._post('/public/api/correo/notification', data=email_data)
