@@ -153,8 +153,89 @@ client.update_queue_item(
     etapa="Procesamiento completado"
 )
 
+# NUEVO 🎯: Finalizar elemento automáticamente como "Successful"
+result = client.finish_queue_item(
+    item_id="ca9cf1c9-9d9b-4b24-8547-63d1c5265fbf",
+    output={
+        "resultado": "Documento procesado exitosamente",
+        "datos_extraidos": {"total": "$1,500.00", "cliente": "Acme Corp"},
+        "tiempo_procesamiento": "2.3 segundos",
+        "precision": "99.2%"
+    },
+    etapa="Procesamiento completado"
+)
+
+# NUEVO 🎯: Finalizar simple (sin datos de salida)
+result = client.finish_queue_item(
+    item_id="550e8400-e29b-41d4-a716-446655440000"
+)
+
+# NUEVO 🎯: Finalizar con progreso personalizado
+result = client.finish_queue_item(
+    item_id="abc12345-def6-7890-abcd-123456789012",
+    output={"status": "Completado con observaciones"},
+    progress=95,
+    etapa="Finalizado con advertencias"
+)
+
 # Obtener analíticas
 analytics = client.get_queue_analytics(period='24h')
+```
+
+### 🎯 Flujo Completo de Cola con `finish_queue_item`
+
+```python
+import kurai
+
+client = kurai.Client("https://api.cloud.lexia.la", "lx-xxxxx")
+
+# 1. Obtener siguiente elemento para procesar
+item = client.get_next_queue_item(
+    queue_name="document_processing",
+    status="New",
+    mark_as_processing=True  # Marca automáticamente como "In Progress"
+)
+
+if item['success'] and item['item']:
+    item_id = item['item']['id']
+    item_data = item['item']['data']
+    
+    try:
+        # 2. Procesar el elemento
+        document_id = item_data['document_id']
+        extracted_data = client.get_document_extracted_data(document_id)
+        
+        # 3. Realizar lógica de negocio
+        processed_result = {
+            "total_amount": extracted_data.get('total', 0),
+            "vendor_name": extracted_data.get('vendor', 'N/A'),
+            "processing_timestamp": "2024-01-15T10:30:00Z",
+            "validation_score": 0.98
+        }
+        
+        # 4. 🎯 Finalizar elemento exitosamente
+        result = client.finish_queue_item(
+            item_id=item_id,
+            output={
+                "status": "Procesado exitosamente",
+                "extracted_data": processed_result,
+                "processing_time": "1.8 segundos",
+                "confidence": "98%"
+            },
+            etapa="Completado y validado"
+        )
+        
+        print(f"✅ Elemento {item_id} finalizado exitosamente")
+        
+    except Exception as e:
+        # En caso de error, actualizar status manualmente
+        client.update_queue_item(
+            item_id=item_id,
+            status="Failed",
+            data={"error": str(e)},
+            etapa="Error en procesamiento"
+        )
+        print(f"❌ Error procesando {item_id}: {e}")
 ```
 
 ### 📧 Gestión de Correos
@@ -290,6 +371,7 @@ except FileNotFoundError:
 - `update_queue_item(item_id, data=None, status=None, merge_mode="update", etapa=None)` - Actualizar elemento
 - `bulk_delete_queue_items(item_ids)` - Eliminar múltiples
 - `get_queue_analytics(period='24h')` - Obtener analíticas
+- **🆕 `finish_queue_item(item_id, output=None, progress=100, etapa=None)`** - Finalizar como "Successful"
 
 #### Grids
 - `get_grid_data(grid_id, page=1, per_page=50, filters=None)` - Obtener datos
@@ -304,6 +386,66 @@ except FileNotFoundError:
 
 #### Utilidades
 - `health_check()` - Verificar estado de la API
+
+### 🆕 Método `finish_queue_item` - Detalles
+
+El método `finish_queue_item` es una forma conveniente de marcar un elemento de cola como completado exitosamente. **Automáticamente**:
+
+- ✅ Establece el status como "Successful"
+- ✅ Registra timestamp de finalización
+- ✅ Establece progreso a 100% (o valor personalizado)
+- ✅ Combina datos de salida con información existente
+- ✅ Calcula duración total del proceso
+
+#### Parámetros:
+- `item_id` (str): **Requerido.** ID del elemento de cola (UUID)
+- `output` (dict): **Opcional.** Datos de salida del procesamiento
+- `progress` (int): **Opcional.** Progreso del elemento (0-100%, por defecto 100%)
+- `etapa` (str): **Opcional.** Descripción de la etapa (máximo 255 caracteres)
+
+#### Casos de uso ideales:
+- ✅ Finalizar procesamiento de documentos
+- ✅ Completar tareas de automatización
+- ✅ Marcar workflows como exitosos
+- ✅ Registrar resultados de validación
+
+#### Ejemplo avanzado:
+```python
+# Procesar documento y finalizar
+document_id = 12345
+extracted_data = client.get_document_extracted_data(document_id)
+
+# Procesar datos...
+validation_result = validate_invoice_data(extracted_data)
+
+# Finalizar con resultados detallados
+result = client.finish_queue_item(
+    item_id="ca9cf1c9-9d9b-4b24-8547-63d1c5265fbf",
+    output={
+        "document_id": document_id,
+        "validation_status": "approved",
+        "extracted_fields": {
+            "invoice_number": "INV-2024-001",
+            "total_amount": 1500.00,
+            "vendor": "Acme Corporation",
+            "due_date": "2024-02-15"
+        },
+        "confidence_scores": {
+            "invoice_number": 0.99,
+            "total_amount": 0.98,
+            "vendor": 0.97
+        },
+        "processing_metrics": {
+            "extraction_time": "1.2s",
+            "validation_time": "0.8s",
+            "total_time": "2.0s"
+        }
+    },
+    etapa="Factura procesada y validada exitosamente"
+)
+
+print(f"✅ Factura procesada: {result['item']['completed_at']}")
+```
 
 ## 📊 Ejemplo Completo
 
@@ -347,9 +489,27 @@ def flujo_completo():
             priority=2
         )
         
-        print(f"✅ Tarea en cola: {queue_result['item']['id']}")
+        item_id = queue_result['item']['id']
+        print(f"✅ Tarea en cola: {item_id}")
         
-        # 5. Obtener estadísticas
+        # 5. Simular procesamiento y finalizar
+        # (En un escenario real, esto sería procesamiento asíncrono)
+        extracted_data = client.get_document_extracted_data(document_id)
+        
+        # 6. 🆕 Finalizar elemento con resultados
+        finish_result = client.finish_queue_item(
+            item_id=item_id,
+            output={
+                "extraction_successful": True,
+                "data_extracted": extracted_data,
+                "processing_timestamp": "2024-01-15T10:30:00Z"
+            },
+            etapa="Procesamiento completado exitosamente"
+        )
+        
+        print(f"✅ Elemento finalizado: {finish_result['item']['completed_at']}")
+        
+        # 7. Obtener estadísticas
         analytics = client.get_queue_analytics("24h")
         print(f"📊 Procesados hoy: {analytics['summary']['processed_items']}")
         
@@ -429,48 +589,141 @@ cola = client.add_queue_item("procesamiento", {"doc_id": doc['document']['id']})
 print(f"📄 Documento {doc['document']['id']} en cola {cola['item']['id']}")
 ```
 
-### 🏭 Ejemplo Productivo
+### 🏭 Ejemplo Productivo con Colas
 ```python
 import kurai
 import os
+import time
 from pathlib import Path
 
-def procesar_facturas():
+def worker_procesar_facturas():
+    """Worker que procesa elementos de cola continuamente"""
     client = kurai.Client(
         tenant_url=os.getenv("LEXIA_URL"),
         api_key=os.getenv("LEXIA_API_KEY")
     )
     
-    # Procesar todas las facturas de una carpeta
-    facturas_dir = Path("./facturas")
+    print("🚀 Worker iniciado - Procesando facturas...")
     
-    for archivo in facturas_dir.glob("*.pdf"):
+    while True:
         try:
-            # Subir y procesar
-            resultado = client.upload_and_process_document(
-                str(archivo),
-                area_id=1,
-                description=f"Factura {archivo.name}"
+            # Obtener siguiente elemento
+            next_item = client.get_next_queue_item(
+                queue_name="facturas_procesamiento",
+                status="New",
+                mark_as_processing=True
             )
             
-            # Agregar a cola de validación
-            client.add_queue_item(
-                "validacion_facturas",
-                {
-                    "document_id": resultado['document']['id'],
-                    "filename": archivo.name,
-                    "timestamp": resultado['document']['created_at']
+            if not next_item['success'] or not next_item['item']:
+                print("⏳ No hay elementos pendientes, esperando...")
+                time.sleep(10)
+                continue
+            
+            item = next_item['item']
+            item_id = item['id']
+            document_id = item['data']['document_id']
+            
+            print(f"📄 Procesando documento {document_id}...")
+            
+            # Obtener datos extraídos
+            extracted_data = client.get_document_extracted_data(document_id)
+            
+            # Procesar lógica de negocio
+            processed_result = {
+                "invoice_number": extracted_data.get('numero_factura'),
+                "total_amount": float(extracted_data.get('total', 0)),
+                "vendor_name": extracted_data.get('proveedor'),
+                "processed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
+            
+            # 🎯 Finalizar elemento exitosamente
+            result = client.finish_queue_item(
+                item_id=item_id,
+                output={
+                    "status": "Procesado exitosamente",
+                    "extracted_data": processed_result,
+                    "processing_time": "2.1 segundos",
+                    "confidence": "97.8%"
                 },
-                priority=2
+                etapa="Factura procesada y validada"
             )
             
-            print(f"✅ {archivo.name} procesada correctamente")
+            print(f"✅ Factura {document_id} procesada exitosamente")
             
         except Exception as e:
-            print(f"❌ Error con {archivo.name}: {e}")
+            print(f"❌ Error procesando elemento: {e}")
+            
+            # Marcar como fallido si tenemos el item_id
+            if 'item_id' in locals():
+                try:
+                    client.update_queue_item(
+                        item_id=item_id,
+                        status="Failed",
+                        data={"error": str(e)},
+                        etapa="Error en procesamiento"
+                    )
+                except:
+                    pass
+            
+            time.sleep(5)
 
 if __name__ == "__main__":
-    procesar_facturas()
+    worker_procesar_facturas()
+```
+
+### 🔄 Ejemplo con Retry Logic
+```python
+def procesar_con_reintentos():
+    """Ejemplo de procesamiento con lógica de reintentos"""
+    client = kurai.Client("https://api.cloud.lexia.la", "lx-xxxxx")
+    
+    max_reintentos = 3
+    
+    for intento in range(max_reintentos):
+        try:
+            # Obtener elemento
+            item = client.get_next_queue_item(
+                queue_name="documentos_complejos",
+                mark_as_processing=True
+            )
+            
+            if not item['success']:
+                break
+                
+            item_id = item['item']['id']
+            
+            # Procesar...
+            resultado = procesar_documento_complejo(item['item']['data'])
+            
+            # 🎯 Finalizar exitosamente
+            client.finish_queue_item(
+                item_id=item_id,
+                output=resultado,
+                etapa=f"Completado en intento {intento + 1}"
+            )
+            
+            print(f"✅ Procesado exitosamente en intento {intento + 1}")
+            break
+            
+        except Exception as e:
+            print(f"❌ Intento {intento + 1} falló: {e}")
+            
+            if intento == max_reintentos - 1:
+                # Último intento, marcar como fallido
+                client.update_queue_item(
+                    item_id=item_id,
+                    status="Failed",
+                    data={"error": str(e), "intentos": max_reintentos},
+                    etapa="Falló después de múltiples intentos"
+                )
+            else:
+                # Reintento, volver a "New"
+                client.update_queue_item(
+                    item_id=item_id,
+                    status="New",
+                    data={"reintentos": intento + 1},
+                    etapa=f"Reintento {intento + 1}"
+                )
 ```
 
 ## 🆘 Soporte

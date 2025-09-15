@@ -81,7 +81,7 @@ class Client:
         Realizar una request HTTP
         
         Args:
-            method (str): Método HTTP (GET, POST, PUT, DELETE)
+            method (str): Método HTTP (GET, POST, PUT, DELETE, PATCH)
             endpoint (str): Endpoint de la API
             **kwargs: Argumentos adicionales para requests
             
@@ -141,6 +141,11 @@ class Client:
     def _delete(self, endpoint: str, data: dict = None) -> dict:
         """DELETE request helper"""
         response = self._make_request('DELETE', endpoint, json=data)
+        return response.json()
+    
+    def _patch(self, endpoint: str, data: dict = None) -> dict:
+        """PATCH request helper"""
+        response = self._make_request('PATCH', endpoint, json=data)
         return response.json()
     
     # ==============================================
@@ -421,6 +426,79 @@ class Client:
         """
         return self._get('/public/api/queues/analytics', params={'period': period})
     
+    def finish_queue_item(self, item_id: str, output: dict = None, 
+                         progress: int = 100, etapa: str = None) -> dict:
+        """
+        Finalizar un elemento de cola marcándolo como "Successful" automáticamente
+        
+        Este método es una forma conveniente de marcar un elemento como completado exitosamente.
+        Automáticamente establece el status como "Successful", registra el timestamp de finalización
+        y combina los datos de salida con la información existente.
+        
+        Args:
+            item_id (str): ID del elemento de cola (UUID)
+            output (dict): Datos de salida del procesamiento (opcional)
+            progress (int): Progreso del elemento (por defecto 100%)
+            etapa (str): Nueva etapa descriptiva (opcional, máximo 255 caracteres)
+            
+        Returns:
+            dict: Información del elemento finalizado
+            
+        Raises:
+            KuraiException: Si hay un error en la API
+            
+        Ejemplo:
+            # Finalizar con resultados
+            result = client.finish_queue_item(
+                item_id="ca9cf1c9-9d9b-4b24-8547-63d1c5265fbf",
+                output={
+                    "resultado": "Documento procesado exitosamente",
+                    "datos_extraidos": {"total": "$1,500.00", "fecha": "2024-01-15"},
+                    "tiempo_procesamiento": "2.3 segundos",
+                    "precision": "99.2%"
+                },
+                etapa="Procesamiento completado"
+            )
+            
+            # Finalizar simple sin datos de salida
+            result = client.finish_queue_item(
+                item_id="550e8400-e29b-41d4-a716-446655440000"
+            )
+            
+            # Finalizar con progreso personalizado
+            result = client.finish_queue_item(
+                item_id="abc12345-def6-7890-abcd-123456789012",
+                output={"status": "Procesado parcialmente"},
+                progress=95,
+                etapa="Completado con advertencias"
+            )
+        """
+        # Validar que item_id no esté vacío
+        if not item_id or not item_id.strip():
+            raise KuraiException("item_id es requerido y no puede estar vacío")
+        
+        # Validar progreso
+        if not isinstance(progress, int) or progress < 0 or progress > 100:
+            raise KuraiException("progress debe ser un entero entre 0 y 100")
+        
+        # Validar longitud de etapa
+        if etapa and len(etapa) > 255:
+            raise KuraiException("etapa no puede tener más de 255 caracteres")
+        
+        # Preparar datos para el request
+        finish_data = {
+            "progress": progress
+        }
+        
+        if output:
+            finish_data["output"] = output
+        
+        if etapa:
+            finish_data["etapa"] = etapa
+        
+        # Realizar request PATCH
+        return self._patch(f'/public/api/queues/items/{item_id}/finish', data=finish_data)
+    
     # ==============================================
     # GRIDS API
     # ==============================================
@@ -518,7 +596,6 @@ class Client:
             
             return self._post('/public/api/correo/responder', data=data)
 
-
     def send_email(self, to, subject, body, body_type="html", cc=None, bcc=None, 
         reply_to=None, body_text=None, archivos=None) -> dict:
         """
@@ -607,54 +684,54 @@ class Client:
             return self._post('/public/api/correo/enviar', data=email_data)
 
     def send_simple_email(self, to, subject, body, body_type="html") -> dict:
-            """
-            Método de conveniencia para enviar un correo simple sin adjuntos
+        """
+        Método de conveniencia para enviar un correo simple sin adjuntos
+        
+        Args:
+            to (str): Destinatario del correo
+            subject (str): Asunto del correo
+            body (str): Cuerpo del mensaje
+            body_type (str): "html" o "texto" (por defecto "html")
             
-            Args:
-                to (str): Destinatario del correo
-                subject (str): Asunto del correo
-                body (str): Cuerpo del mensaje
-                body_type (str): "html" o "texto" (por defecto "html")
-                
-            Returns:
-                dict: Resultado del envío
-                
-            Ejemplo:
-                result = client.send_simple_email(
-                    to="usuario@ejemplo.com",
-                    subject="Notificación importante",
-                    body="<p>Tu documento ha sido procesado exitosamente.</p>"
-                )
-            """
-            return self.send_email(to=to, subject=subject, body=body, body_type=body_type)
+        Returns:
+            dict: Resultado del envío
+            
+        Ejemplo:
+            result = client.send_simple_email(
+                to="usuario@ejemplo.com",
+                subject="Notificación importante",
+                body="<p>Tu documento ha sido procesado exitosamente.</p>"
+            )
+        """
+        return self.send_email(to=to, subject=subject, body=body, body_type=body_type)
 
     def send_notification_email(self, to, template_type, template_data=None) -> dict:
-            """
-            Enviar email usando plantillas predefinidas del sistema
+        """
+        Enviar email usando plantillas predefinidas del sistema
+        
+        Args:
+            to (str): Destinatario del correo
+            template_type (str): Tipo de plantilla ("document_processed", "queue_completed", etc.)
+            template_data (dict): Datos para rellenar la plantilla
             
-            Args:
-                to (str): Destinatario del correo
-                template_type (str): Tipo de plantilla ("document_processed", "queue_completed", etc.)
-                template_data (dict): Datos para rellenar la plantilla
-                
-            Returns:
-                dict: Resultado del envío
-                
-            Ejemplo:
-                result = client.send_notification_email(
-                    to="usuario@ejemplo.com",
-                    template_type="document_processed",
-                    template_data={
-                        "document_name": "factura_enero.pdf",
-                        "processing_time": "2.3 segundos",
-                        "extracted_data": {"total": "$1,500.00"}
-                    }
-                )
-            """
-            email_data = {
-                'to': [to] if isinstance(to, str) else to,
-                'template_type': template_type,
-                'template_data': template_data or {}
-            }
+        Returns:
+            dict: Resultado del envío
             
-            return self._post('/public/api/correo/notification', data=email_data)
+        Ejemplo:
+            result = client.send_notification_email(
+                to="usuario@ejemplo.com",
+                template_type="document_processed",
+                template_data={
+                    "document_name": "factura_enero.pdf",
+                    "processing_time": "2.3 segundos",
+                    "extracted_data": {"total": "$1,500.00"}
+                }
+            )
+        """
+        email_data = {
+            'to': [to] if isinstance(to, str) else to,
+            'template_type': template_type,
+            'template_data': template_data or {}
+        }
+        
+        return self._post('/public/api/correo/notification', data=email_data)
