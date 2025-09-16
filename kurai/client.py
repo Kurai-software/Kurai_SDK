@@ -145,7 +145,19 @@ class Client:
     
     def _patch(self, endpoint: str, data: dict = None) -> dict:
         """PATCH request helper"""
-        response = self._make_request('PATCH', endpoint, json=data)
+        # Para PATCH requests, enviar como form-data en lugar de JSON
+        if data:
+            # Remover temporalmente Content-Type para que requests use form-data
+            original_headers = self.session.headers.copy()
+            if 'Content-Type' in self.session.headers:
+                del self.session.headers['Content-Type']
+            
+            response = self._make_request('PATCH', endpoint, data=data)
+            self.session.headers = original_headers
+        else:
+            # Si no hay datos, enviar request vacío
+            response = self._make_request('PATCH', endpoint, data={})
+        
         return response.json()
     
     # ==============================================
@@ -491,7 +503,7 @@ class Client:
         }
         
         if output:
-            finish_data["output"] = output
+            finish_data["output"] = json.dumps(output)  # Convertir dict a JSON string para form-data
         
         if etapa:
             finish_data["etapa"] = etapa

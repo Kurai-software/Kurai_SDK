@@ -1,23 +1,17 @@
-import kurai 
+import kurai
 
-# Crear cliente
+# Configurar cliente
 client = kurai.Client(
     tenant_url="https://api.cloud.lexia.la",
-    api_key="lx-yucfi04YjEnJ6Jat285Fhbjj9QW59aKjCiFAUFWVxWOqc"
+    api_key="lx-e4og6Z6BNreKl3WTCYfBE0OaHRAJPjpvhd2QOWAUZs1Su"
 )
 
-# Probar health check
+# Test: Finalizar elemento simple
 try:
-    health = client.health_check()
-    print(f"✅ Health check exitoso: {health}")
-
-    print("\n📝 Test 1: Obtener siguiente elemento (básico)")
-    result = client.get_next_queue_item(
-        queue_name="684e69fb-c078-441d-8bb3-c9b8e0be0226",
-        status= "In Progress",                    # "New", "In Progress", "Successful", "Failed"  
-        priority_order=True,             # Respetar prioridad
-        mark_as_processing=True          # Marcar como "In Progress" automáticamente
+    result = client.finish_queue_item(
+        item_id="f0bd8930-0fdf-45e3-bcb6-d6c589d6c7ef"
     )
-    print(f"Resultado: {result}")
+    print("Exitoso:")
+    print(result)
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"Error: {e}")
